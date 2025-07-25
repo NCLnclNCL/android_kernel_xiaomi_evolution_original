@@ -522,7 +522,12 @@ int get_quick_charge_type(struct mt_charger *mtk_chg)
 				/* ui_soc 0.01% */
 				pval.intval = 100;
 				rc = power_supply_set_property(bms_psy, POWER_SUPPLY_PROP_MTK_SOC_DECIMAL_RATE, &pval);
+<<<<<<< HEAD
 				schedule_delayed_work(&mtk_chg->clear_soc_decimal_rate_work, msecs_to_jiffies(CLEAR_SOC_DECIMAL_RATE_MS));
+=======
+				queue_delayed_work(system_power_efficient_wq, &mtk_chg->clear_soc_decimal_rate_work, msecs_to_jiffies(CLEAR_SOC_DECIMAL_RATE_MS));
+				msleep(500);
+>>>>>>> 8ba7858c0624 (Use more power efficient workingqueues)
 				power_supply_changed(bms_psy);
 				soc_decimal_rate_changed = true;
 				pr_info("%s, soc_decimal_rate_changed:QUICK_CHARGE_TURBE.\n", __func__);
@@ -1176,7 +1181,7 @@ static void init_extcon_work(struct work_struct *work)
 	if (of_property_read_bool(node, "extcon")) {
 		info->edev = extcon_get_edev_by_phandle(mt_chg->dev, 0);
 		if (IS_ERR(info->edev)) {
-			schedule_delayed_work(&mt_chg->extcon_work,
+			queue_delayed_work(system_power_efficient_wq, &mt_chg->extcon_work,
 				msecs_to_jiffies(50));
 			return;
 		}
@@ -1381,7 +1386,7 @@ static int mt_charger_probe(struct platform_device *pdev)
 	mt_chg->extcon_info = info;
 
 	INIT_DELAYED_WORK(&mt_chg->extcon_work, init_extcon_work);
-	schedule_delayed_work(&mt_chg->extcon_work, 0);
+	queue_delayed_work(system_power_efficient_wq, &mt_chg->extcon_work, 0);
 	#endif
 
 	INIT_DELAYED_WORK(&mt_chg->clear_soc_decimal_rate_work, smblib_clear_soc_decimal_rate_work);
