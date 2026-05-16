@@ -522,12 +522,7 @@ int get_quick_charge_type(struct mt_charger *mtk_chg)
 				/* ui_soc 0.01% */
 				pval.intval = 100;
 				rc = power_supply_set_property(bms_psy, POWER_SUPPLY_PROP_MTK_SOC_DECIMAL_RATE, &pval);
-<<<<<<< HEAD
 				schedule_delayed_work(&mtk_chg->clear_soc_decimal_rate_work, msecs_to_jiffies(CLEAR_SOC_DECIMAL_RATE_MS));
-=======
-				queue_delayed_work(system_power_efficient_wq, &mtk_chg->clear_soc_decimal_rate_work, msecs_to_jiffies(CLEAR_SOC_DECIMAL_RATE_MS));
-				msleep(500);
->>>>>>> 8ba7858c0624 (Use more power efficient workingqueues)
 				power_supply_changed(bms_psy);
 				soc_decimal_rate_changed = true;
 				pr_info("%s, soc_decimal_rate_changed:QUICK_CHARGE_TURBE.\n", __func__);
