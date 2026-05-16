@@ -363,7 +363,7 @@ HOST_LFS_LIBS := $(shell getconf LFS_LIBS 2>/dev/null)
 
 HOSTCC       = gcc
 HOSTCXX      = g++
-HOSTCFLAGS   := -Wall -Wmissing-prototypes -Wstrict-prototypes -O2 \
+HOSTCFLAGS   :=  -Wmissing-prototypes -Wstrict-prototypes -O2 \
 		-fomit-frame-pointer -std=gnu89 $(HOST_LFS_CFLAGS)
 HOSTCXXFLAGS := -O2 $(HOST_LFS_CFLAGS)
 HOSTLDFLAGS  := $(HOST_LFS_LDFLAGS)
@@ -417,9 +417,8 @@ LINUXINCLUDE    := \
 		$(USERINCLUDE)
 
 KBUILD_AFLAGS   := -D__ASSEMBLY__
-KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
+KBUILD_CFLAGS   :=  -Wundef -Wstrict-prototypes -Wno-trigraphs \
 		   -fno-strict-aliasing -fno-common -fshort-wchar \
-		   -Werror-implicit-function-declaration \
 		   -Wno-format-security \
 		   -std=gnu89
 KBUILD_CPPFLAGS := -D__KERNEL__
@@ -685,7 +684,29 @@ KBUILD_CFLAGS   += -Os
 else
 KBUILD_CFLAGS   += -O2
 endif
-
+ifeq ($(cc-name),gcc)
+KBUILD_CFLAGS  += -march=armv8.2-a+crc+crypto -mcpu=cortex-a76.cortex-a55+crc+crypto -mtune=cortex-a76.cortex-a55
+KBUILD_AFLAGS  += -march=armv8.2-a+crc+crypto -mcpu=cortex-a76.cortex-a55+crc+crypto -mtune=cortex-a76.cortex-a55
+#KBUILD_CFLAGS += -march=armv8.2-a+crc+crypto -mcpu=cortex-a53+crc+crypto -mtune=cortex-a53
+#KBUILD_AFLAGS += -march=armv8.2-a+crc+crypto -mcpu=cortex-a53+crc+crypto -mtune=cortex-a53
+endif
+ifeq ($(cc-name),clang)
+KBUILD_CFLAGS	+= -march=armv8.2-a+crc+crypto -mcpu=cortex-a55+crc+crypto -mtune=cortex-a55
+KBUILD_AFLAGS	+= -march=armv8.2-a+crc+crypto -mcpu=cortex-a55+crc+crypto -mtune=cortex-a55
+ifneq ($(LLVM),)
+ifdef CONFIG_LLVM_POLLY
+KBUILD_CFLAGS	+= -mllvm -polly \
+		   -mllvm -polly-run-inliner \
+		   -mllvm -polly-reschedule=1 \
+                   -mllvm -polly-loopfusion-greedy=1 \
+                   -mllvm -polly-postopts=1 \
+		   -mllvm -polly-ast-use-context \
+		   -mllvm -polly-detect-keep-going \
+		   -mllvm -polly-vectorizer=stripmine \
+		   -mllvm -polly-invariant-load-hoisting
+endif
+endif
+endif
 # Tell gcc to never replace conditional load with a non-conditional one
 KBUILD_CFLAGS	+= $(call cc-option,--param=allow-store-data-races=0)
 KBUILD_CFLAGS	+= $(call cc-option,-fno-allow-store-data-races)
@@ -716,18 +737,18 @@ endif
 # This selects the stack protector compiler flag. Testing it is delayed
 # until after .config has been reprocessed, in the prepare-compiler-check
 # target.
-ifdef CONFIG_CC_STACKPROTECTOR_REGULAR
-  stackp-flag := -fstack-protector
-  stackp-name := REGULAR
-else
-ifdef CONFIG_CC_STACKPROTECTOR_STRONG
-  stackp-flag := -fstack-protector-strong
-  stackp-name := STRONG
-else
+//ifdef CONFIG_CC_STACKPROTECTOR_REGULAR
+//  stackp-flag := -fstack-protector
+//  stackp-name := REGULAR
+//else
+//ifdef CONFIG_CC_STACKPROTECTOR_STRONG
+//  stackp-flag := -fstack-protector-strong
+//  stackp-name := STRONG
+//else
   # Force off for distro compilers that enable stack protector by default.
   stackp-flag := $(call cc-option, -fno-stack-protector)
-endif
-endif
+//endif
+//endif
 # Find arch-specific stack protector compiler sanity-checking script.
 ifdef CONFIG_CC_STACKPROTECTOR
   stackp-path := $(srctree)/scripts/gcc-$(SRCARCH)_$(BITS)-has-stack-protector.sh
