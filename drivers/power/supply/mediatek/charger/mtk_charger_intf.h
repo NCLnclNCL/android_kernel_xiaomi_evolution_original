@@ -71,7 +71,10 @@ do {								\
 		pr_notice(fmt, ##args);				\
 	}							\
 } while (0)
-
+#ifdef CONFIG_LIMIT_CHARGER
+#define DEFAULT_CHARGE_STOP_LEVEL 100
+#define DEFAULT_CHARGE_START_LEVEL 0
+#endif
 #define CHR_CC		(0x0001)
 #define CHR_TOPOFF	(0x0002)
 #define CHR_TUNING	(0x0003)
@@ -617,7 +620,10 @@ struct charger_manager {
 	bool			pd_verify_in_process;
 
 	int			mode_bf;
-
+#ifdef CONFIG_LIMIT_CHARGER
+	int charge_stop_level;		/* retail, userspace bd config */
+	int charge_start_level;		/* retail, userspace bd config */
+#endif
 	/* plug in time*/
 	struct timespec plugintime;
 };
