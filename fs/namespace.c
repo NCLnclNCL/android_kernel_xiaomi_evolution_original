@@ -1199,16 +1199,13 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
 	struct super_block *sb = old->mnt.mnt_sb;
 	struct mount *mnt;
 	int err;
-	char *buf;
-    char *path;
 #if defined(CONFIG_KSU_SUSFS_SUS_MOUNT) && !defined(CONFIG_KSU_SUSFS_MODIFY)
 	// We won't check it anymore if boot-completed stage is triggered.
 	if (susfs_is_sdcard_android_data_decrypted) {
 		goto orig_flow;
 	}
 	bool is_current_ksu_domain = susfs_is_current_ksu_domain();
-    buf = (char *)__get_free_page(GFP_KERNEL);
-	// - It is very important that we need to use CL_COPY_MNT_NS to identify whether 
+=	// - It is very important that we need to use CL_COPY_MNT_NS to identify whether 
 	//   the clone is a copy_tree() or single mount like called by __do_loopback()
 	// - if caller process is KSU, consider the following situation:
 	//     1. it is NOT doing unshare => call alloc_vfsmnt() to assign a new sus mnt_id
@@ -1218,27 +1215,32 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
 
 	// Firstly, check if it is KSU process
 	if (unlikely(is_current_ksu_domain)) {
-        if (buf) {
-                path = dentry_path_raw(old->mnt_mountpoint,
-                                       buf,
-                                       PAGE_SIZE);
-                pr_info("susfs: clone_mnt path=%s dev=%s mnt_id=%d pid=%d comm=%s\n",
-                        IS_ERR(path) ? "ERR" : path,
+                pr_info("susfs: clone_mnt dev=%s mnt_id=%d pid=%d comm=%s\n",
                         old->mnt_devname ?
                                 old->mnt_devname : "NULL",
                         old->mnt_id,
                         current->pid,
                         current->comm);
-           free_page((unsigned long)buf);
-        }
 		// if it is doing single clone
 		if (!(flag & CL_COPY_MNT_NS)) {
+			                pr_info("susfs: clone_mnt_0 dev=%s mnt_id=%d pid=%d comm=%s\n",
+                        old->mnt_devname ?
+                                old->mnt_devname : "NULL",
+                        old->mnt_id,
+                        current->pid,
+                        current->comm);
 			mnt = alloc_vfsmnt(old->mnt_devname, true, 0);
 			goto bypass_orig_flow;
 		}
 		// if it is doing unshare
 		mnt = alloc_vfsmnt(old->mnt_devname, true, old->mnt_id);
 		if (mnt) {
+			                pr_info("susfs: clone_mnt_1 dev=%s mnt_id=%d pid=%d comm=%s\n",
+                        old->mnt_devname ?
+                                old->mnt_devname : "NULL",
+                        old->mnt_id,
+                        current->pid,
+                        current->comm);
 			mnt->mnt.susfs_mnt_id_backup = DEFAULT_SUS_MNT_ID_FOR_KSU_PROC_UNSHARE;
 		}
 		goto bypass_orig_flow;
@@ -1246,19 +1248,12 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
 	orig_flow:
 //	 Lastly, just check if old->mnt_id is sus
 	if (old->mnt_id >= DEFAULT_SUS_MNT_ID) {
-		if (buf) {
-                path = dentry_path_raw(old->mnt_mountpoint,
-                                       buf,
-                                       PAGE_SIZE);
-                pr_info("susfs: clone_mnt_2 path=%s dev=%s mnt_id=%d pid=%d comm=%s\n",
-                        IS_ERR(path) ? "ERR" : path,
+                pr_info("susfs: clone_mnt_2 dev=%s mnt_id=%d pid=%d comm=%s\n",
                         old->mnt_devname ?
                                 old->mnt_devname : "NULL",
                         old->mnt_id,
                         current->pid,
                         current->comm);
-           free_page((unsigned long)buf);
-        }
 		// Important Note: 
 		 //  - Here we can't determine whether the unshare is called by zygisk or not,
 		//    so we can only patch out the unshare code in zygisk source code for now,
