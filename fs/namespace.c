@@ -1138,7 +1138,7 @@ vfs_kern_mount(struct file_system_type *type, int flags, const char *name, void 
                 current->comm,
                 flags,
                 susfs_is_current_ksu_domain());
-		mnt = alloc_vfsmnt(name, true, 0);
+		mnt = alloc_vfsmnt(name, false, 0);
 		goto bypass_orig_flow;
 	}
 	mnt = alloc_vfsmnt(name, false, 0);
