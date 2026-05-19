@@ -151,7 +151,7 @@ static int show_mountinfo(struct seq_file *m, struct vfsmount *mnt)
 	//		pathname);
 	//	}
 	//	pr_info("%s: mountinfo by: %d with process: %s\n", __func__, current_uid_val, current->comm);
-		return 0;
+		return SEQ_SKIP;
 	}
 #endif
 	seq_printf(m, "%i %i %u:%u ", r->mnt_id, r->mnt_parent->mnt_id,
