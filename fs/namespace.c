@@ -45,7 +45,6 @@ static int susfs_mnt_group_start = DEFAULT_SUS_MNT_GROUP_ID;
 
 #define CL_ZYGOTE_COPY_MNT_NS BIT(24) /* used by copy_mnt_ns() */
 #define CL_COPY_MNT_NS BIT(25) /* used by copy_mnt_ns() */
-#define CL_SUS_BIND_FILE BIT(26) /* used by do_loopback(): source is a regular file, not a directory */
 #endif
 
 #ifdef CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT
@@ -1238,25 +1237,17 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
 	 
 	// Firstly, check if it is KSU process
 	if (unlikely(is_current_ksu_domain)) {
-		// Only assign a sus mnt_id for real file bind-mounts (CL_SUS_BIND_FILE),
-		// i.e. when the bind-mount source is a regular file, NOT a directory.
-		// Directory bind-mounts and internal clones (CL_PRIVATE, etc.) fall
-		// through to orig_flow and get a normal mnt_id.
-		if (flag & CL_SUS_BIND_FILE) {
+		// if it is doing single clone
+		if (!(flag & CL_COPY_MNT_NS)) {
 			mnt = alloc_vfsmnt(old->mnt_devname, true, 0);
 			goto bypass_orig_flow;
 		}
-		// if it is doing unshare (CL_COPY_MNT_NS set)
-		if (flag & CL_COPY_MNT_NS) {
-			mnt = alloc_vfsmnt(old->mnt_devname, true, old->mnt_id);
-			if (mnt) {
-				mnt->mnt.susfs_mnt_id_backup = DEFAULT_SUS_MNT_ID_FOR_KSU_PROC_UNSHARE;
-			}
-			goto bypass_orig_flow;
+		// if it is doing unshare
+		mnt = alloc_vfsmnt(old->mnt_devname, true, old->mnt_id);
+		if (mnt) {
+			mnt->mnt.susfs_mnt_id_backup = DEFAULT_SUS_MNT_ID_FOR_KSU_PROC_UNSHARE;
 		}
-		// For directory bind-mounts and all other internal clones (CL_PRIVATE,
-		// CL_SLAVE, etc.) from KSU, fall through to orig_flow — they get a
-		// normal mnt_id unless the source mount is already sus.
+		goto bypass_orig_flow;
 	}
 	orig_flow:
 //	 Lastly, just check if old->mnt_id is sus
@@ -2502,16 +2493,8 @@ static int do_loopback(struct path *path, const char *old_name,
 
 	if (recurse)
 		mnt = copy_tree(old, old_path.dentry, CL_COPY_MNT_NS_FILE);
-	else {
-		int clone_flags = 0;
-#if defined(CONFIG_KSU_SUSFS_SUS_MOUNT)
-		/* Tag the clone so clone_mnt() only assigns a sus mnt_id for
-		 * file bind-mounts, not directory bind-mounts. */
-		if (d_is_reg(old_path.dentry))
-			clone_flags |= CL_SUS_BIND_FILE;
-#endif
-		mnt = clone_mnt(old, old_path.dentry, clone_flags);
-	}
+	else
+		mnt = clone_mnt(old, old_path.dentry, 0);
 
 	if (IS_ERR(mnt)) {
 		err = PTR_ERR(mnt);
