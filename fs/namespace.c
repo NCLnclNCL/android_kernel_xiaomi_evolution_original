@@ -45,6 +45,8 @@ static int susfs_mnt_group_start = DEFAULT_SUS_MNT_GROUP_ID;
 
 #define CL_ZYGOTE_COPY_MNT_NS BIT(24) /* used by copy_mnt_ns() */
 #define CL_COPY_MNT_NS BIT(25) /* used by copy_mnt_ns() */
+#define CL_SUS_BIND_FILE BIT(26) /* used by do_loopback(): source is a regular file, not a directory */
+
 #endif
 
 #ifdef CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT
@@ -129,6 +131,11 @@ static inline struct hlist_head *mp_hash(struct dentry *dentry)
 	return &mountpoint_hashtable[tmp & mp_hash_mask];
 }
 #if defined(CONFIG_KSU_SUSFS_SUS_MOUNT) 
+static inline bool susfs_is_adb_modules_path(const char *name)
+{
+	return name && strncmp(name, "/adb/modules/", 13) == 0;
+}
+
 // Our own mnt_alloc_id() that assigns mnt_id starting from DEFAULT_SUS_MNT_ID
 static int susfs_mnt_alloc_id(struct mount *mnt)
 {
@@ -1157,8 +1164,9 @@ vfs_kern_mount(struct file_system_type *type, int flags, const char *name, void 
 
 #if defined(CONFIG_KSU_SUSFS_SUS_MOUNT)
 	// For newly created mounts, the only caller process we care is KSU
+	// Only assign a new sus mnt_id if the source path starts with /adb/modules/
 	if (!susfs_is_sdcard_android_data_decrypted && unlikely(susfs_is_current_ksu_domain())) {
-		mnt = alloc_vfsmnt(name, true, 0);
+		mnt = alloc_vfsmnt(name, susfs_is_adb_modules_path(name), 0);
 		goto bypass_orig_flow;
 	}
 	mnt = alloc_vfsmnt(name, false, 0);
@@ -1237,14 +1245,15 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
 	 
 	// Firstly, check if it is KSU process
 	if (unlikely(is_current_ksu_domain)) {
+		bool _spoof = susfs_is_adb_modules_path(old->mnt_devname);
 		// if it is doing single clone
 		if (!(flag & CL_COPY_MNT_NS)) {
-			mnt = alloc_vfsmnt(old->mnt_devname, true, 0);
+			mnt = alloc_vfsmnt(old->mnt_devname, _spoof, 0);
 			goto bypass_orig_flow;
 		}
 		// if it is doing unshare
-		mnt = alloc_vfsmnt(old->mnt_devname, true, old->mnt_id);
-		if (mnt) {
+		mnt = alloc_vfsmnt(old->mnt_devname, _spoof, _spoof ? old->mnt_id : 0);
+		if (mnt && _spoof) {
 			mnt->mnt.susfs_mnt_id_backup = DEFAULT_SUS_MNT_ID_FOR_KSU_PROC_UNSHARE;
 		}
 		goto bypass_orig_flow;
@@ -1256,8 +1265,10 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
 		 //  - Here we can't determine whether the unshare is called by zygisk or not,
 		//    so we can only patch out the unshare code in zygisk source code for now,
 		//     but at least we can deal with old sus mounts using alloc_vfsmnt()
+		// Only re-spoof if the source is still an /adb/modules/ path
  		 
-		mnt = alloc_vfsmnt(old->mnt_devname, true, 0);
+		mnt = alloc_vfsmnt(old->mnt_devname,
+		                   susfs_is_adb_modules_path(old->mnt_devname), 0);
 		goto bypass_orig_flow;
 	}
 	mnt = alloc_vfsmnt(old->mnt_devname, false, 0);
