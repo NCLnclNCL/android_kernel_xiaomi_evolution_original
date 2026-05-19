@@ -1205,7 +1205,7 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
 		goto orig_flow;
 	}
 	bool is_current_ksu_domain = susfs_is_current_ksu_domain();
-=	// - It is very important that we need to use CL_COPY_MNT_NS to identify whether 
+	// - It is very important that we need to use CL_COPY_MNT_NS to identify whether 
 	//   the clone is a copy_tree() or single mount like called by __do_loopback()
 	// - if caller process is KSU, consider the following situation:
 	//     1. it is NOT doing unshare => call alloc_vfsmnt() to assign a new sus mnt_id
