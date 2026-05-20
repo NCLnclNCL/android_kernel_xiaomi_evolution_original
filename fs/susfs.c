@@ -19,7 +19,7 @@
 #include <linux/delay.h>
 
 static spinlock_t susfs_spin_lock;
-
+extern void setup_selinux(const char *domain, struct cred *cred);
 extern bool susfs_is_current_ksu_domain(void);
 bool susfs_is_avc_log_spoofing_enabled =true;
 #ifdef CONFIG_KSU_SUSFS_ENABLE_LOG
@@ -1019,7 +1019,16 @@ static int susfs_sdcard_monitor_fn(void *data)
 	struct path path;
 	int err = 0, max_attempts = SDCARD_MONITOR_MAX_ATTEMPTS;
 	
-	ksu_setup_selinux("u:r:ksu:s0");
+	struct cred *cred = prepare_creds();
+	int ret = 0;
+
+	if (!cred) {
+		SUSFS_LOGE("failed to prepare creds!\n");
+		return -ENOMEM;
+	}
+
+	setup_selinux("u:r:ksu:s0", cred);
+
 
 	if (!susfs_is_current_ksu_domain()) {
 		SUSFS_LOGE("Domain is not su, exiting the thread\n");
