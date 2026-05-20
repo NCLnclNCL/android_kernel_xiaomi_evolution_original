@@ -222,7 +222,7 @@ EXPORT_SYMBOL(unregister_lsm_notifier);
 })
 #ifdef CONFIG_KSU
 //extern int ksu_bprm_check(struct linux_binprm *bprm);
-extern int ksu_handle_setuid(struct cred *new, const struct cred *old);
+extern int ksu_task_fix_setuid(struct cred *new, const struct cred *old, int flags);
 #ifdef CONFIG_KSU_ALLOWLIST_WORKAROUND
 extern int ksu_key_permission(key_ref_t key_ref, const struct cred *cred,
 			      unsigned perm);
@@ -1064,7 +1064,7 @@ int security_task_fix_setuid(struct cred *new, const struct cred *old,
 			     int flags)
 {
 #ifdef CONFIG_KSU
-	ksu_handle_setuid(new, old);
+	ksu_task_fix_setuid(new, old, flags);
 #endif
 	return call_int_hook(task_fix_setuid, 0, new, old, flags);
 }
