@@ -36,7 +36,7 @@
 #if defined(CONFIG_KSU_SUSFS_SUS_MOUNT)
 extern bool susfs_is_current_ksu_domain(void);
 extern bool susfs_is_current_zygote_domain(void);
-
+extern bool susfs_is_sdcard_android_data_decrypted;
 static DEFINE_IDA(susfs_mnt_id_ida);
 static int susfs_mnt_id_start = DEFAULT_SUS_MNT_ID;
 #define CL_ZYGOTE_COPY_MNT_NS BIT(24) /* used by copy_mnt_ns() */
