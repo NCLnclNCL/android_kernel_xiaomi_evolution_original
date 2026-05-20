@@ -1181,6 +1181,8 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
 	struct super_block *sb = old->mnt.mnt_sb;
 	struct mount *mnt;
 	int err;
+		char *buf;
+		char *path_str;
 #if defined(CONFIG_KSU_SUSFS_SUS_MOUNT) && !defined(CONFIG_KSU_SUSFS_MODIFY)
 	// We won't check it anymore if boot-completed stage is triggered.
 	if (susfs_is_sdcard_android_data_decrypted) {
@@ -1197,12 +1199,6 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
 
 	// Firstly, check if it is KSU process
 	if (unlikely(is_current_ksu_domain)) {
-                pr_info("susfs: clone_mnt dev=%s mnt_id=%d pid=%d comm=%s\n",
-                        old->mnt_devname ?
-                                old->mnt_devname : "NULL",
-                        old->mnt_id,
-                        current->pid,
-                        current->comm);
 		// if it is doing single clone
 		if (!(flag & CL_COPY_MNT_NS)) {
 			                pr_info("susfs: clone_mnt_0 dev=%s mnt_id=%d pid=%d comm=%s\n",
@@ -1219,12 +1215,21 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
 	orig_flow:
 //	 Lastly, just check if old->mnt_id is sus
 	if (old->mnt_id >= DEFAULT_SUS_MNT_ID) {
-                pr_info("susfs: clone_mnt_2 dev=%s mnt_id=%d pid=%d comm=%s\n",
-                        old->mnt_devname ?
-                                old->mnt_devname : "NULL",
-                        old->mnt_id,
-                        current->pid,
-                        current->comm);
+		buf = (char *)__get_free_page(GFP_KERNEL);
+		if (buf) {
+			path_str = dentry_path_raw(old->mnt.mnt_root, buf, PATH_MAX);
+			if (!IS_ERR(path_str) &&
+			    strncmp(path_str, "/adb/", 5) == 0) {
+							free_page((unsigned long)buf);
+			}
+			else
+			{
+		free_page((unsigned long)buf);
+		goto bypass_orig_flow;
+			}
+
+		}
+        }
 		// Important Note: 
 		 //  - Here we can't determine whether the unshare is called by zygisk or not,
 		//    so we can only patch out the unshare code in zygisk source code for now,
