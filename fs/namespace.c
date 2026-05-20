@@ -34,7 +34,7 @@
 #include "internal.h"
 
 #if defined(CONFIG_KSU_SUSFS_SUS_MOUNT)
- bool susfs_is_sdcard_android_data_decrypted = true;
+ bool susfs_is_sdcard_android_data_decrypted = false;
 extern bool susfs_is_current_ksu_domain(void);
 extern bool susfs_is_current_zygote_domain(void);
 
