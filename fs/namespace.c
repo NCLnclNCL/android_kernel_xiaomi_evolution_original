@@ -1112,17 +1112,6 @@ vfs_kern_mount(struct file_system_type *type, int flags, const char *name, void 
 
 #if defined(CONFIG_KSU_SUSFS_SUS_MOUNT)
 	// For newly created mounts, the only caller process we care is KSU
-	if (!susfs_is_sdcard_android_data_decrypted && unlikely(susfs_is_current_ksu_domain())) {
-		        pr_info("susfs: vfs_kern_mount name=%s fs=%s pid=%d comm=%s flags=0x%x ksu=%d\n",
-                name ? name : "NULL",
-                type ? type->name : "NULL",
-                current->pid,
-                current->comm,
-                flags,
-                susfs_is_current_ksu_domain());
-		mnt = alloc_vfsmnt(name, true, 0);
-		goto bypass_orig_flow;
-	}
 	mnt = alloc_vfsmnt(name, false, 0);
 bypass_orig_flow:
 #else
@@ -1197,20 +1186,8 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
 
 	// Firstly, check if it is KSU process
 	if (unlikely(is_current_ksu_domain)) {
-                pr_info("susfs: clone_mnt dev=%s mnt_id=%d pid=%d comm=%s\n",
-                        old->mnt_devname ?
-                                old->mnt_devname : "NULL",
-                        old->mnt_id,
-                        current->pid,
-                        current->comm);
 		// if it is doing single clone
 		if (!(flag & CL_COPY_MNT_NS)) {
-			                pr_info("susfs: clone_mnt_0 dev=%s mnt_id=%d pid=%d comm=%s\n",
-                        old->mnt_devname ?
-                                old->mnt_devname : "NULL",
-                        old->mnt_id,
-                        current->pid,
-                        current->comm);
 			mnt = alloc_vfsmnt(old->mnt_devname, true, 0);
 			goto bypass_orig_flow;
 		}
@@ -1219,12 +1196,6 @@ static struct mount *clone_mnt(struct mount *old, struct dentry *root,
 	orig_flow:
 //	 Lastly, just check if old->mnt_id is sus
 	if (old->mnt_id >= DEFAULT_SUS_MNT_ID) {
-                pr_info("susfs: clone_mnt_2 dev=%s mnt_id=%d pid=%d comm=%s\n",
-                        old->mnt_devname ?
-                                old->mnt_devname : "NULL",
-                        old->mnt_id,
-                        current->pid,
-                        current->comm);
 		// Important Note: 
 		 //  - Here we can't determine whether the unshare is called by zygisk or not,
 		//    so we can only patch out the unshare code in zygisk source code for now,
