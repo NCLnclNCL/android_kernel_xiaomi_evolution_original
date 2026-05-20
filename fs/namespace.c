@@ -1111,7 +1111,7 @@ vfs_kern_mount(struct file_system_type *type, int flags, const char *name, void 
 
 #if defined(CONFIG_KSU_SUSFS_SUS_MOUNT)
 	// For newly created mounts, the only caller process we care is KSU
-	mnt = alloc_vfsmnt(name, false, 0);
+	mnt = alloc_vfsmnt(name, true, 0);
 bypass_orig_flow:
 #else
 	mnt = alloc_vfsmnt(name);
